@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#8A4B22">
+  <title>圖片轉 PPT 簡單工具</title>
+  <link rel="icon" href="img/icon.png">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="appbar">
+    <img src="img/icon.png" alt="" class="appicon">
+    <div>
+      <h1>圖片轉 PPT 簡單工具</h1>
+      <p>照片、影片一鍵變投影片</p>
+    </div>
+  </header>
+
+  <main>
+    <!-- 步驟 1 -->
+    <section class="card">
+      <h2><span class="stepnum">1</span>加入照片或影片</h2>
+      <div class="pickers">
+        <button type="button" class="pick pick-main" id="btnFolder">
+          <span class="pick-ico" aria-hidden="true">📁</span>
+          <span><b>選擇資料夾</b><small>資料夾裡的照片和影片全部加入</small></span>
+        </button>
+        <button type="button" class="pick" id="btnFiles">
+          <span class="pick-ico" aria-hidden="true">🖼️</span>
+          <span><b>選擇照片／影片</b><small>可以一次選很多個</small></span>
+        </button>
+        <button type="button" class="pick" id="btnZip">
+          <span class="pick-ico" aria-hidden="true">🗜️</span>
+          <span><b>ZIP 壓縮檔</b><small>壓縮檔裡的照片和影片全部加入</small></span>
+        </button>
+      </div>
+      <label class="check"><input type="checkbox" id="chkSub"> 選資料夾時，也加入「子資料夾」裡的檔案</label>
+      <p class="hint">支援：JPG、PNG、GIF、BMP、WEBP 照片，MP4 影片。再按一次可以繼續加入更多。</p>
+      <input type="file" id="inFiles" accept="image/jpeg,image/png,image/gif,image/bmp,image/webp,video/mp4,.jpg,.jpeg,.png,.gif,.bmp,.webp,.mp4" multiple hidden>
+      <input type="file" id="inFolder" webkitdirectory directory multiple hidden>
+      <input type="file" id="inZip" accept=".zip,application/zip" hidden>
+    </section>
+
+    <!-- 步驟 2 -->
+    <section class="card" id="step2" hidden>
+      <h2><span class="stepnum">2</span>檢視與調整順序</h2>
+      <p class="hint strong">👆 <b>按住</b>縮圖約半秒，感覺震動後<b>拖到</b>想要的位置放開。<br>點一下縮圖可以放大看，也能用按鈕移動。</p>
+      <div class="toolbar">
+        <span id="countText" class="count" aria-live="polite"></span>
+        <div class="tb-btns">
+          <button type="button" class="tb" id="sortName">依檔名排序</button>
+          <button type="button" class="tb" id="sortTime">依拍攝/修改時間</button>
+          <button type="button" class="tb danger" id="clearAll">全部清除</button>
+        </div>
+      </div>
+      <div class="grid" id="grid"></div>
+    </section>
+
+    <!-- 完成 -->
+    <section class="card done" id="result" hidden>
+      <h2>✅ 投影片做好了！</h2>
+      <p id="resultText"></p>
+      <div class="result-btns" id="resultBtns"></div>
+    </section>
+    <div class="spacer"></div>
+  </main>
+
+  <!-- 底部固定：製作按鈕 -->
+  <div class="makebar" id="makeBar" hidden>
+    <button type="button" class="primary" id="btnMake"><span class="stepnum light">3</span><span id="makeText">製作投影片</span></button>
+  </div>
+
+  <!-- 放大預覽 -->
+  <div class="modal" id="modal" hidden role="dialog" aria-modal="true" aria-labelledby="mTitle">
+    <div class="modal-box">
+      <div class="modal-head">
+        <b id="mTitle"></b>
+        <button type="button" class="close" id="mClose" aria-label="關閉">✕</button>
+      </div>
+      <div class="modal-media" id="mMedia"></div>
+      <p class="modal-name" id="mName"></p>
+      <div class="move-btns">
+        <button type="button" id="mFirst">⏮ 移到最前</button>
+        <button type="button" id="mPrev">◀ 往前一張</button>
+        <button type="button" id="mNext">往後一張 ▶</button>
+        <button type="button" id="mLast">移到最後 ⏭</button>
+      </div>
+      <button type="button" class="danger wide" id="mDel">🗑 刪除這一張</button>
+    </div>
+  </div>
+
+  <!-- 處理中 -->
+  <div class="busy" id="busy" hidden>
+    <div class="busy-box" role="status" aria-live="polite">
+      <div class="spinner" aria-hidden="true"></div>
+      <p id="busyText">處理中…</p>
+      <div class="bar"><div id="busyBar"></div></div>
+      <p class="hint" id="busySub"></p>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" hidden><span id="toastText"></span><button type="button" id="toastBtn" hidden></button></div>
+
+  <script src="lib/jszip.min.js"></script>
+  <script src="lib/pptxgen.bundle.js"></script>
+  <script src="js/pptbuilder.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
