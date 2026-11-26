@@ -54,7 +54,33 @@
           <button type="button" class="tb danger" id="clearAll">全部清除</button>
         </div>
       </div>
+      <div class="review-settings" aria-label="投影片輸出設定">
+        <label class="field field-wide">
+          <span>輸出檔名</span>
+          <span class="filename-input">
+            <input type="text" id="outputName" inputmode="text" maxlength="120" autocomplete="off">
+            <span>.pptx</span>
+          </span>
+        </label>
+        <label class="field field-wide">
+          <span>首頁標題</span>
+          <input type="text" id="coverTitle" maxlength="80" autocomplete="off">
+        </label>
+        <label class="field field-size">
+          <span>縮圖大小 <output id="thumbnailSizeText" for="thumbnailSize">160px</output></span>
+          <input type="range" id="thumbnailSize" min="100" max="240" step="10" value="160" aria-label="縮圖大小">
+        </label>
+      </div>
       <div class="grid" id="grid"></div>
+      <div class="add-more-menu" id="addMoreMenu" hidden>
+        <b>繼續加入照片或影片</b>
+        <div class="add-more-actions">
+          <button type="button" id="addMoreFolder">📁 選擇資料夾</button>
+          <button type="button" id="addMoreFiles">🖼️ 選擇照片／影片</button>
+          <button type="button" id="addMoreZip">🗜️ ZIP 壓縮檔</button>
+        </div>
+        <p class="hint">資料夾會沿用上方「包含子資料夾」的勾選設定。</p>
+      </div>
     </section>
 
     <!-- 完成 -->

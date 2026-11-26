@@ -15,7 +15,13 @@
   var NativeFiles = isNative ? Cap.registerPlugin('NativeFiles') : null;
   var collator = new Intl.Collator('zh-Hant', { numeric: true, sensitivity: 'base' });
 
-  var state = { items: [], seq: 0, lastDeleted: null, downloadUrl: null };
+  var initialNow = new Date();
+  var state = {
+    items: [], seq: 0, lastDeleted: null, downloadUrl: null,
+    coverTitle: dateStr(initialNow),
+    outputBase: 'PPT_' + dateStr(initialNow, true),
+    thumbnailSize: 160
+  };
   var $ = function (id) { return document.getElementById(id); };
   var grid = $('grid');
 
@@ -32,6 +38,14 @@
   function dateStr(d, withTime) {
     var s = d.getFullYear() + '_' + pad(d.getMonth() + 1) + '_' + pad(d.getDate());
     return withTime ? s + '_' + pad(d.getHours()) + '_' + pad(d.getMinutes()) : s;
+  }
+  function normalizedOutputBase(value) {
+    var name = String(value || '').trim().replace(/(?:\.pptx)+$/i, '');
+    name = name.replace(/[<>:"/\\|?*\u0000-\u001F]/g, '_').replace(/[. ]+$/g, '').trim();
+    return name || state.outputBase || ('PPT_' + dateStr(new Date(), true));
+  }
+  function currentCoverTitle() {
+    return String(state.coverTitle || '').trim() || dateStr(new Date());
   }
   function fmtDur(sec) {
     if (!isFinite(sec) || sec <= 0) return '';
@@ -295,6 +309,16 @@
     el.querySelector('.cs').textContent = SUBTITLE;
     return el;
   })();
+  var addMoreTile = (function () {
+    var el = document.createElement('button');
+    el.type = 'button';
+    el.className = 'tile add-more';
+    el.setAttribute('aria-label', '繼續加入照片或影片');
+    el.setAttribute('aria-expanded', 'false');
+    el.setAttribute('aria-controls', 'addMoreMenu');
+    el.innerHTML = '<span class="plus" aria-hidden="true">＋</span><span>加入更多</span><small>資料夾、照片／影片、ZIP</small>';
+    return el;
+  })();
 
   function makeTile(it) {
     var el = document.createElement('div');
@@ -332,7 +356,7 @@
     var n = state.items.length;
     $('step2').hidden = n === 0;
     $('makeBar').hidden = n === 0;
-    coverTile.querySelector('.ct').textContent = dateStr(new Date());
+    coverTile.querySelector('.ct').textContent = currentCoverTitle();
     if (grid.firstChild !== coverTile) grid.insertBefore(coverTile, grid.firstChild);
     state.items.forEach(function (it, i) {
       var el = it.el || makeTile(it);
@@ -340,6 +364,7 @@
       el.querySelector('.num').textContent = i + 1;
       el.setAttribute('aria-label', '第 ' + (i + 1) + ' 張：' + it.name);
     });
+    grid.appendChild(addMoreTile);
     var imgs = state.items.filter(function (x) { return x.kind === 'image'; }).length;
     $('countText').textContent = '共 ' + n + ' 個（照片 ' + imgs + '、影片 ' + (n - imgs) + '）';
     $('makeText').textContent = '製作投影片（共 ' + (n + 1) + ' 頁，含首頁）';
@@ -370,6 +395,23 @@
   }
   function freeItem(it) { if (it.thumbUrl) URL.revokeObjectURL(it.thumbUrl); }
 
+  function closeAddMoreMenu() {
+    $('addMoreMenu').hidden = true;
+    addMoreTile.setAttribute('aria-expanded', 'false');
+  }
+  addMoreTile.addEventListener('click', function () {
+    var opening = $('addMoreMenu').hidden;
+    $('addMoreMenu').hidden = !opening;
+    addMoreTile.setAttribute('aria-expanded', opening ? 'true' : 'false');
+    if (opening) $('addMoreFiles').focus();
+  });
+  $('addMoreFolder').addEventListener('click', function () { closeAddMoreMenu(); $('btnFolder').click(); });
+  $('addMoreFiles').addEventListener('click', function () { closeAddMoreMenu(); $('btnFiles').click(); });
+  $('addMoreZip').addEventListener('click', function () { closeAddMoreMenu(); $('btnZip').click(); });
+  document.addEventListener('click', function (e) {
+    if (!$('addMoreMenu').hidden && !e.target.closest('#addMoreMenu') && !e.target.closest('.add-more')) closeAddMoreMenu();
+  });
+
   $('sortName').addEventListener('click', function () {
     state.items.sort(function (a, b) { return collator.compare(a.relPath, b.relPath); });
     render(); toast('已依檔名排序（1、2、…10）');
@@ -384,6 +426,21 @@
     state.items = []; state.lastDeleted = null;
     hideResult(); render();
     if (NativeFiles) NativeFiles.clearCache().catch(function () {});
+  });
+
+  $('coverTitle').addEventListener('input', function (e) {
+    state.coverTitle = e.target.value;
+    coverTile.querySelector('.ct').textContent = currentCoverTitle();
+    hideResult();
+  });
+  $('outputName').addEventListener('input', function (e) {
+    e.target.value = e.target.value.replace(/(?:\.pptx)+$/i, '');
+    hideResult();
+  });
+  $('thumbnailSize').addEventListener('input', function (e) {
+    state.thumbnailSize = Number(e.target.value);
+    grid.style.setProperty('--thumb-size', state.thumbnailSize + 'px');
+    $('thumbnailSizeText').textContent = state.thumbnailSize + 'px';
   });
 
   // 點一下：預覽；✕：刪除
@@ -551,8 +608,9 @@
 
   async function makePpt() {
     if (!state.items.length) return;
-    var now = new Date();
-    var fileName = 'PPT_' + dateStr(now, true) + '.pptx';
+    var outputBase = normalizedOutputBase($('outputName').value);
+    $('outputName').value = outputBase;
+    var fileName = outputBase + '.pptx';
     var items = state.items.slice();
     try {
       var list = [];
@@ -563,7 +621,7 @@
       }
       var blob = await PapaPptBuilder.build({
         PptxGenJS: window.PptxGenJS, JSZip: window.JSZip, items: list,
-        title: dateStr(now), subtitle: SUBTITLE, outputType: 'blob',
+        title: currentCoverTitle(), subtitle: SUBTITLE, outputType: 'blob',
         onProgress: function (p) {
           if (p.phase === 'layout') busy('正在排版投影片…', 22);
           else if (p.phase === 'media') busy('正在放入照片與影片…', 22 + (p.done / p.total) * 38, p.done + ' / ' + p.total);
@@ -652,5 +710,10 @@
 
   // 啟動
   if (NativeFiles) NativeFiles.clearCache().catch(function () {});
+  $('coverTitle').value = state.coverTitle;
+  $('outputName').value = state.outputBase;
+  $('thumbnailSize').value = state.thumbnailSize;
+  $('thumbnailSizeText').textContent = state.thumbnailSize + 'px';
+  grid.style.setProperty('--thumb-size', state.thumbnailSize + 'px');
   render();
 })();
